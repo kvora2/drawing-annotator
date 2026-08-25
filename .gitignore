@@ -9,3 +9,6 @@ venv/
 # node
 frontend/node_modules/
 frontend/dist/
+
+# macos
+.DS_Store
