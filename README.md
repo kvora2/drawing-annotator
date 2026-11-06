@@ -75,3 +75,24 @@ npm run dev                         # serves http://localhost:5173
 - `POST /api/annotations/` : create a box.
 - `DELETE /api/annotations/{id}/` : delete a box.
 - `POST /api/annotations/{id}/ocr/` : run OCR on a green box, save and return the text.
+
+## Running tests
+
+```
+cd backend
+source .venv/bin/activate
+python manage.py test annotations
+```
+
+The suite uses Django's throwaway test database and a temporary `MEDIA_ROOT` per test class, so it never touches `db.sqlite3` or `backend/media/`. It covers PDF upload and rendering (including rejected uploads), annotation persistence, filtering, and deletion, OCR on capture boxes, and rejection of OCR on ignore boxes.
+
+The capture-OCR test needs the Tesseract binary on `PATH` (see "How to run"). Without it, that one test is skipped instead of failing.
+
+## Known gaps
+
+These are known limitations of the current API. They are not covered by the test suite and have not been fixed yet:
+
+- **Page bounds are not validated.** An annotation can be created for a page past the end of the document (for example page 99 of a 1-page PDF). The create succeeds, and OCR on it later fails with a 400.
+- **Coordinates are not validated as normalized.** `x`, `y`, `w`, and `h` are supposed to be in the range 0 to 1 with the box inside the page, but values such as `x=-1, w=5` are accepted.
+- **A malformed `page` query parameter causes a 500.** `GET /api/annotations/?page=abc` raises a `ValueError` instead of returning a 400 or an empty list.
+- **Deleting a document leaves its files on disk.** `DELETE /api/documents/{id}/` removes the database rows (annotations cascade), but the uploaded PDF and the rendered PNGs under `media/renders/<id>/` stay behind.
